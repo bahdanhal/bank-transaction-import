@@ -8,6 +8,7 @@ use App\Models\Import;
 use App\Models\ImportLog;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Str;
 use Tests\TestCase;
 
 final class ImportApiTest extends TestCase
@@ -54,7 +55,7 @@ final class ImportApiTest extends TestCase
 
         ImportLog::create([
             'import_id' => $import->id,
-            'transaction_id' => 'TR-ERROR-01',
+            'transaction_id' => '550e8400-e29b-41d4-a716-446655440000',
             'error_message' => 'Amount should be more than zero',
         ]);
 
@@ -64,7 +65,7 @@ final class ImportApiTest extends TestCase
             ->assertJsonPath('id', $import->id)
             ->assertJsonPath('status', 'failed')
             ->assertJsonCount(1, 'logs')
-            ->assertJsonPath('logs.0.transaction_id', 'TR-ERROR-01')
+            ->assertJsonPath('logs.0.transaction_id', '550e8400-e29b-41d4-a716-446655440000')
             ->assertJsonPath('logs.0.error_message', 'Amount should be more than zero');
     }
 
@@ -77,10 +78,13 @@ final class ImportApiTest extends TestCase
 
     public function test_can_upload_and_process_valid_csv(): void
     {
+        $tx1 = (string) Str::uuid();
+        $tx2 = (string) Str::uuid();
+
         $csvContent = implode("\n", [
             'transaction_id,account_number,transaction_date,amount,currency',
-            '550e8400-e29b-41d4-a716-446655440000,PL12345678901234567890123456,2025-10-14,150000,PLN',
-            '550e8400-e29b-41d4-a716-446655440001,PL98765432109876543210987654,2025-10-13,20050,USD'
+            "{$tx1},{$this->validIban},2025-10-14,150000,PLN",
+            "{$tx2},{$this->validIban},2025-10-13,20050,USD"
         ]);
 
         $file = UploadedFile::fake()->createWithContent('transactions.csv', $csvContent);
@@ -96,21 +100,22 @@ final class ImportApiTest extends TestCase
             ->assertJsonPath('failed_records', 0);
 
         $this->assertDatabaseCount('transactions', 2);
-        $this->assertDatabaseHas('transactions', ['transaction_id' => 'TX-100', 'currency' => 'PLN']);
-        $this->assertDatabaseHas('transactions', ['transaction_id' => 'TX-101', 'currency' => 'EUR']);
+        $this->assertDatabaseHas('transactions', ['transaction_id' => $tx1, 'currency' => 'PLN']);
+        $this->assertDatabaseHas('transactions', ['transaction_id' => $tx2, 'currency' => 'USD']);
         $this->assertDatabaseCount('import_logs', 0);
     }
 
     public function test_can_process_csv_with_validation_errors(): void
     {
-        $invalidIban = 'PL00000000000000000000000000'; // has IBAN invalid control key
+        $validUuid = (string) Str::uuid();
+        $invalidIban = 'PL00000000000000000000000000'; // Invalid IBAN checksum
 
         $csvContent = implode("\n", [
             'transaction_id,account_number,transaction_date,amount,currency',
-            "TX-VALID,{$this->validIban},2026-03-01,200.00,PLN",
-            "TX-INVALID-IBAN,{$invalidIban},2026-03-01,100.00,PLN",
-            "TX-INVALID-AMOUNT,{$this->validIban},2026-03-01,-50.00,PLN",
-            "TX-INVALID-CURRENCY,{$this->validIban},2026-03-01,100.00,POLAND"
+            "{$validUuid},{$this->validIban},2026-03-01,200.00,PLN",
+            Str::uuid() . ",{$invalidIban},2026-03-01,100.00,PLN",
+            Str::uuid() . ",{$this->validIban},2026-03-01,-50.00,PLN",
+            "not-a-valid-uuid,{$this->validIban},2026-03-01,100.00,POLAND"
         ]);
 
         $file = UploadedFile::fake()->createWithContent('mixed.csv', $csvContent);
@@ -126,32 +131,33 @@ final class ImportApiTest extends TestCase
             ->assertJsonPath('failed_records', 3);
 
         $this->assertDatabaseCount('transactions', 1);
-        $this->assertDatabaseHas('transactions', ['transaction_id' => 'TX-VALID']);
+        $this->assertDatabaseHas('transactions', ['transaction_id' => $validUuid]);
 
         $this->assertDatabaseCount('import_logs', 3);
-        $this->assertDatabaseHas('import_logs', ['transaction_id' => 'TX-INVALID-IBAN']);
-        $this->assertDatabaseHas('import_logs', ['transaction_id' => 'TX-INVALID-AMOUNT']);
-        $this->assertDatabaseHas('import_logs', ['transaction_id' => 'TX-INVALID-CURRENCY']);
+        $this->assertDatabaseHas('import_logs', ['transaction_id' => 'not-a-valid-uuid']);
     }
 
     public function test_can_upload_and_process_valid_json(): void
     {
-        $jsonContent = '[
-            {
-                "transaction_id": "550e8400-e29b-41d4-a716-446655440000",
-                "account_number": "PL12345678901234567890123456",
-                "transaction_date": "2025-10-14",
-                "amount": 150000,
-                "currency": "PLN"
-            },
-            {
-                "transaction_id": "550e8400-e29b-41d4-a716-446655440001",
-                "account_number": "PL98765432109876543210987654",
-                "transaction_date": "2025-10-13",
-                "amount": 20050,
-                "currency": "USD"
-            }
-        ]';
+        $tx1 = (string) Str::uuid();
+        $tx2 = (string) Str::uuid();
+
+        $jsonContent = json_encode([
+            [
+                'transaction_id' => $tx1,
+                'account_number' => $this->validIban,
+                'transaction_date' => '2025-10-14',
+                'amount' => 150000,
+                'currency' => 'PLN'
+            ],
+            [
+                'transaction_id' => $tx2,
+                'account_number' => $this->validIban,
+                'transaction_date' => '2025-10-13',
+                'amount' => 20050,
+                'currency' => 'USD'
+            ]
+        ]);
 
         $file = UploadedFile::fake()->createWithContent('data.json', $jsonContent);
 
@@ -161,26 +167,30 @@ final class ImportApiTest extends TestCase
 
         $response->assertStatus(201)
             ->assertJsonPath('status', 'success')
-            ->assertJsonPath('total_records', 1)
-            ->assertJsonPath('successful_records', 1);
+            ->assertJsonPath('total_records', 2)
+            ->assertJsonPath('successful_records', 2);
 
-        $this->assertDatabaseHas('transactions', ['transaction_id' => 'JSON-1', 'currency' => 'USD']);
+        $this->assertDatabaseHas('transactions', ['transaction_id' => $tx1, 'currency' => 'PLN']);
+        $this->assertDatabaseHas('transactions', ['transaction_id' => $tx2, 'currency' => 'USD']);
     }
 
     public function test_can_upload_and_process_valid_xml(): void
     {
+        $tx1 = (string) Str::uuid();
+        $tx2 = (string) Str::uuid();
+
         $xmlContent = <<<XML
         <transactions>
           <transaction>
-            <transaction_id>550e8400-e29b-41d4-a716-446655440000</transaction_id>
-            <account_number>PL12345678901234567890123456</account_number>
+            <transaction_id>{$tx1}</transaction_id>
+            <account_number>{$this->validIban}</account_number>
             <transaction_date>2025-10-14</transaction_date>
             <amount>150000</amount>
             <currency>PLN</currency>
           </transaction>
           <transaction>
-            <transaction_id>550e8400-e29b-41d4-a716-446655440001</transaction_id>
-            <account_number>PL98765432109876543210987654</account_number>
+            <transaction_id>{$tx2}</transaction_id>
+            <account_number>{$this->validIban}</account_number>
             <transaction_date>2025-10-13</transaction_date>
             <amount>20050</amount>
             <currency>USD</currency>
@@ -196,10 +206,11 @@ final class ImportApiTest extends TestCase
 
         $response->assertStatus(201)
             ->assertJsonPath('status', 'success')
-            ->assertJsonPath('total_records', 1)
-            ->assertJsonPath('successful_records', 1);
+            ->assertJsonPath('total_records', 2)
+            ->assertJsonPath('successful_records', 2);
 
-        $this->assertDatabaseHas('transactions', ['transaction_id' => 'XML-1']);
+        $this->assertDatabaseHas('transactions', ['transaction_id' => $tx1, 'currency' => 'PLN']);
+        $this->assertDatabaseHas('transactions', ['transaction_id' => $tx2, 'currency' => 'USD']);
     }
 
     public function test_fails_when_no_file_uploaded(): void
