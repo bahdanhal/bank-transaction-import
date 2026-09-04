@@ -8,9 +8,11 @@
     "require": {
         "php": "^8.2",
         "inertiajs/inertia-laravel": "^2.0",
+        "intervention/validation": "^4.7",
         "laravel/framework": "^12.0",
         "laravel/sanctum": "^4.0",
         "laravel/tinker": "^2.10.1",
+        "league/csv": "^9.28",
         "tightenco/ziggy": "^2.0"
     },
     "require-dev": {
