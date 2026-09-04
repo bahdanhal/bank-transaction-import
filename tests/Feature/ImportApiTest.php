@@ -1,0 +1,222 @@
+<?php
+
+namespace Tests\Feature;
+
+use App\Models\Import;
+use App\Models\ImportLog;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Tests\TestCase;
+
+class ImportApiTest extends TestCase
+{
+    use RefreshDatabase;
+
+    private string $validIban = 'PL61109010140000071219812874';
+
+    public function test_can_list_all_imports(): void
+    {
+        Import::create([
+            'file_name' => 'test_1.csv',
+            'total_records' => 10,
+            'successful_records' => 10,
+            'failed_records' => 0,
+            'status' => 'success',
+        ]);
+
+        Import::create([
+            'file_name' => 'test_2.json',
+            'total_records' => 5,
+            'successful_records' => 2,
+            'failed_records' => 3,
+            'status' => 'partial',
+        ]);
+
+        $response = $this->getJson('/api/imports');
+
+        $response->assertStatus(200)
+            ->assertJsonCount(2)
+            ->assertJsonFragment(['file_name' => 'test_1.csv'])
+            ->assertJsonFragment(['file_name' => 'test_2.json']);
+    }
+
+    public function test_can_get_single_import_details_with_logs(): void
+    {
+        $import = Import::create([
+            'file_name' => 'failing.csv',
+            'total_records' => 1,
+            'successful_records' => 0,
+            'failed_records' => 1,
+            'status' => 'failed',
+        ]);
+
+        ImportLog::create([
+            'import_id' => $import->id,
+            'transaction_id' => 'TR-ERROR-01',
+            'error_message' => 'Amount should be more than zero',
+        ]);
+
+        $response = $this->getJson("/api/imports/{$import->id}");
+
+        $response->assertStatus(200)
+            ->assertJsonPath('id', $import->id)
+            ->assertJsonPath('status', 'failed')
+            ->assertJsonCount(1, 'logs')
+            ->assertJsonPath('logs.0.transaction_id', 'TR-ERROR-01')
+            ->assertJsonPath('logs.0.error_message', 'Amount should be more than zero');
+    }
+
+    public function test_returns_404_when_import_does_not_exist(): void
+    {
+        $response = $this->getJson('/api/imports/99999');
+
+        $response->assertStatus(404);
+    }
+
+    public function test_can_upload_and_process_valid_csv(): void
+    {
+        $csvContent = implode("\n", [
+            'transaction_id,account_number,transaction_date,amount,currency',
+            '550e8400-e29b-41d4-a716-446655440000,PL12345678901234567890123456,2025-10-14,150000,PLN',
+            '550e8400-e29b-41d4-a716-446655440001,PL98765432109876543210987654,2025-10-13,20050,USD'
+        ]);
+
+        $file = UploadedFile::fake()->createWithContent('transactions.csv', $csvContent);
+
+        $response = $this->postJson('/api/imports', [
+            'file' => $file,
+        ]);
+
+        $response->assertStatus(201)
+            ->assertJsonPath('status', 'success')
+            ->assertJsonPath('total_records', 2)
+            ->assertJsonPath('successful_records', 2)
+            ->assertJsonPath('failed_records', 0);
+
+        $this->assertDatabaseCount('transactions', 2);
+        $this->assertDatabaseHas('transactions', ['transaction_id' => 'TX-100', 'currency' => 'PLN']);
+        $this->assertDatabaseHas('transactions', ['transaction_id' => 'TX-101', 'currency' => 'EUR']);
+        $this->assertDatabaseCount('import_logs', 0);
+    }
+
+    public function test_can_process_csv_with_validation_errors(): void
+    {
+        $invalidIban = 'PL00000000000000000000000000'; // has IBAN invalid control key
+
+        $csvContent = implode("\n", [
+            'transaction_id,account_number,transaction_date,amount,currency',
+            "TX-VALID,{$this->validIban},2026-03-01,200.00,PLN",
+            "TX-INVALID-IBAN,{$invalidIban},2026-03-01,100.00,PLN",
+            "TX-INVALID-AMOUNT,{$this->validIban},2026-03-01,-50.00,PLN",
+            "TX-INVALID-CURRENCY,{$this->validIban},2026-03-01,100.00,POLAND"
+        ]);
+
+        $file = UploadedFile::fake()->createWithContent('mixed.csv', $csvContent);
+
+        $response = $this->postJson('/api/imports', [
+            'file' => $file,
+        ]);
+
+        $response->assertStatus(201)
+            ->assertJsonPath('status', 'partial')
+            ->assertJsonPath('total_records', 4)
+            ->assertJsonPath('successful_records', 1)
+            ->assertJsonPath('failed_records', 3);
+
+        $this->assertDatabaseCount('transactions', 1);
+        $this->assertDatabaseHas('transactions', ['transaction_id' => 'TX-VALID']);
+
+        $this->assertDatabaseCount('import_logs', 3);
+        $this->assertDatabaseHas('import_logs', ['transaction_id' => 'TX-INVALID-IBAN']);
+        $this->assertDatabaseHas('import_logs', ['transaction_id' => 'TX-INVALID-AMOUNT']);
+        $this->assertDatabaseHas('import_logs', ['transaction_id' => 'TX-INVALID-CURRENCY']);
+    }
+
+    public function test_can_upload_and_process_valid_json(): void
+    {
+        $jsonContent = '[
+            {
+                "transaction_id": "550e8400-e29b-41d4-a716-446655440000",
+                "account_number": "PL12345678901234567890123456",
+                "transaction_date": "2025-10-14",
+                "amount": 150000,
+                "currency": "PLN"
+            },
+            {
+                "transaction_id": "550e8400-e29b-41d4-a716-446655440001",
+                "account_number": "PL98765432109876543210987654",
+                "transaction_date": "2025-10-13",
+                "amount": 20050,
+                "currency": "USD"
+            }
+        ]';
+
+        $file = UploadedFile::fake()->createWithContent('data.json', $jsonContent);
+
+        $response = $this->postJson('/api/imports', [
+            'file' => $file,
+        ]);
+
+        $response->assertStatus(201)
+            ->assertJsonPath('status', 'success')
+            ->assertJsonPath('total_records', 1)
+            ->assertJsonPath('successful_records', 1);
+
+        $this->assertDatabaseHas('transactions', ['transaction_id' => 'JSON-1', 'currency' => 'USD']);
+    }
+
+    public function test_can_upload_and_process_valid_xml(): void
+    {
+        $xmlContent = <<<XML
+        <transactions>
+          <transaction>
+            <transaction_id>550e8400-e29b-41d4-a716-446655440000</transaction_id>
+            <account_number>PL12345678901234567890123456</account_number>
+            <transaction_date>2025-10-14</transaction_date>
+            <amount>150000</amount>
+            <currency>PLN</currency>
+          </transaction>
+          <transaction>
+            <transaction_id>550e8400-e29b-41d4-a716-446655440001</transaction_id>
+            <account_number>PL98765432109876543210987654</account_number>
+            <transaction_date>2025-10-13</transaction_date>
+            <amount>20050</amount>
+            <currency>USD</currency>
+          </transaction>
+        </transactions>
+        XML;
+
+        $file = UploadedFile::fake()->createWithContent('data.xml', $xmlContent);
+
+        $response = $this->postJson('/api/imports', [
+            'file' => $file,
+        ]);
+
+        $response->assertStatus(201)
+            ->assertJsonPath('status', 'success')
+            ->assertJsonPath('total_records', 1)
+            ->assertJsonPath('successful_records', 1);
+
+        $this->assertDatabaseHas('transactions', ['transaction_id' => 'XML-1']);
+    }
+
+    public function test_fails_when_no_file_uploaded(): void
+    {
+        $response = $this->postJson('/api/imports');
+
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors(['file']);
+    }
+
+    public function test_fails_when_unsupported_file_extension_uploaded(): void
+    {
+        $file = UploadedFile::fake()->create('document.pdf', 100);
+
+        $response = $this->postJson('/api/imports', [
+            'file' => $file,
+        ]);
+
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors(['file']);
+    }
+}
