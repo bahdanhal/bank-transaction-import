@@ -1,0 +1,16 @@
+[
+  {
+    "transaction_id": "6ba7b810-9dad-11d1-80b4-00c04fd430c8",
+    "account_number": "PL61109010140000071219812874",
+    "transaction_date": "2026-03-01",
+    "amount": 350.00,
+    "currency": "PLN"
+  },
+  {
+    "transaction_id": "6ba7b811-9dad-11d1-80b4-00c04fd430c8",
+    "account_number": "PL61109010140000071219812874",
+    "transaction_date": "2026-03-02",
+    "amount": 78.50,
+    "currency": "EUR"
+  }
+]

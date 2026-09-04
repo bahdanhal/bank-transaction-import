@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions>
+  <transaction>
+    <transaction_id>a8098c1a-f86e-11da-bd1a-00112444be1e</transaction_id>
+    <account_number>PL61109010140000071219812874</account_number>
+    <transaction_date>2026-03-01</transaction_date>
+    <amount>450.00</amount>
+    <currency>PLN</currency>
+  </transaction>
+  <transaction>
+    <transaction_id>a8098c1b-f86e-11da-bd1a-00112444be1e</transaction_id>
+    <account_number>PL61109010140000071219812874</account_number>
+    <transaction_date>2026-03-02</transaction_date>
+    <amount>129.99</amount>
+    <currency>USD</currency>
+  </transaction>
+</transactions>

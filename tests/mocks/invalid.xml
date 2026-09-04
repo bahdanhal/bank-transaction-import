@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<transactions>
+  <transaction>
+    <transaction_id>bad-uuid</transaction_id>
+    <account_number>PL61109010140000071219812874</account_number>
+    <transaction_date>2026-03-01</transaction_date>
+    <amount>0.00</amount>
+    <currency>PLN</currency>
+  </transaction>
+  <transaction>
+    <transaction_id>a8098c1c-f86e-11da-bd1a-00112444be1e</transaction_id>
+    <account_number>PL00000000000000000000000000</account_number>
+    <transaction_date>bad-date</transaction_date>
+    <amount>-50.00</amount>
+    <currency>TOOLONG</currency>
+  </transaction>
+</transactions>
