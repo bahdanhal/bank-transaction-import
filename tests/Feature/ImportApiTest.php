@@ -232,4 +232,53 @@ final class ImportApiTest extends TestCase
         $response->assertStatus(422)
             ->assertJsonValidationErrors(['file']);
     }
+
+    public function test_can_handle_random_json_object_gracefully(): void
+    {
+        $jsonContent = json_encode([
+            'some_id' => 123,
+            'description' => 'random object without transactions'
+        ]);
+
+        $file = UploadedFile::fake()->createWithContent('random.json', $jsonContent);
+
+        $response = $this->postJson('/api/imports', [
+            'file' => $file,
+        ]);
+
+        $response->assertStatus(201)
+            ->assertJsonPath('status', 'failed')
+            ->assertJsonPath('failed_records', 1)
+            ->assertJsonPath('successful_records', 0);
+    }
+
+    public function test_can_handle_random_json_primitives_gracefully(): void
+    {
+        $jsonContent = json_encode([1, 2, 3]);
+
+        $file = UploadedFile::fake()->createWithContent('numbers.json', $jsonContent);
+
+        $response = $this->postJson('/api/imports', [
+            'file' => $file,
+        ]);
+
+        $response->assertStatus(201)
+            ->assertJsonPath('status', 'failed')
+            ->assertJsonPath('failed_records', 3)
+            ->assertJsonPath('successful_records', 0);
+    }
+
+    public function test_can_handle_malformed_json_gracefully(): void
+    {
+        $file = UploadedFile::fake()->createWithContent('broken.json', '{ broken json');
+
+        $response = $this->postJson('/api/imports', [
+            'file' => $file,
+        ]);
+
+        $response->assertStatus(201)
+            ->assertJsonPath('status', 'failed')
+            ->assertJsonPath('failed_records', 1)
+            ->assertJsonPath('successful_records', 0);
+    }
 }

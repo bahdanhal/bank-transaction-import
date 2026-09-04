@@ -13,10 +13,10 @@ class XmlTransactionParser implements TransactionParserInterface
     public function parse(UploadedFile $file): array
     {
         $content = file_get_contents($file->getRealPath());
-        $xml = simplexml_load_string($content, 'SimpleXMLElement', LIBXML_NOCDATA);
+        $xml = @simplexml_load_string($content, 'SimpleXMLElement', LIBXML_NOCDATA);
 
         if ($xml === false) {
-            throw new RuntimeException("Niepoprawna struktura XML.");
+            throw new RuntimeException("Invalid XML structure.");
         }
 
         $data = json_decode(json_encode($xml), true);

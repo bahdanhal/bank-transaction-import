@@ -28,16 +28,16 @@ final class ImportController extends Controller
         try {
             $import = $service->handle($request->file('file'));
             return response()->json($import->load('logs'), 201);
-        } catch (Throwable $e) {
+        } catch (Throwable $exception) {
             return response()->json([
-                'error' => 'Błąd przetwarzania: ' . $e->getMessage()
+                'error' => 'Processing error: ' . $exception->getMessage()
             ], 422);
         }
     }
 
-    public function show(int $id): JsonResponse
+    public function show(int $importId): JsonResponse
     {
-        $import = Import::with('logs')->findOrFail($id);
+        $import = Import::with('logs')->findOrFail($importId);
         return response()->json($import);
     }
 }
