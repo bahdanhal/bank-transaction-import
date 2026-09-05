@@ -1,13 +1,27 @@
 <?php
 
 use App\Http\Controllers\ProfileController;
-use Illuminate\Foundation\Application;
+use App\Models\Import;
+use App\Services\TransactionImportService;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
 Route::get('/', function () {
-    return Inertia::render('Imports');
-});
+    return Inertia::render('Imports', [
+        'imports' => Import::with('logs')->latest()->get(),
+    ]);
+})->name('imports.index');
+
+Route::post('/imports', function (Request $request, TransactionImportService $service) {
+    $request->validate([
+        'file' => 'required|file|mimes:csv,txt,json,xml|max:10240',
+    ]);
+
+    $service->handle($request->file('file'));
+
+    return redirect()->back();
+})->name('imports.store');
 
 Route::get('/dashboard', function () {
     return Inertia::render('Dashboard');

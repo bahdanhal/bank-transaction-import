@@ -23,9 +23,11 @@ final readonly class TransactionImportService
     public function handle(UploadedFile $file): Import
     {
         $import = Import::create([
-            'file_name'      => $file->getClientOriginalName(),
-            'status'         => 'failed',
-            'failed_records' => 1,
+            'file_name'          => $file->getClientOriginalName(),
+            'total_records'      => 0,
+            'successful_records' => 0,
+            'failed_records'     => 1,
+            'status'             => 'failed',
         ]);
 
         try {
