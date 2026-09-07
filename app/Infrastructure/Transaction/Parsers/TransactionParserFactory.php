@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Services\Parsers;
+namespace App\Infrastructure\Transaction\Parsers;
 
-use App\Contracts\TransactionParserInterface;
-use InvalidArgumentException;
+use App\Application\Transaction\Contracts\TransactionParserInterface;
+use App\Domain\Transaction\Exceptions\UnsupportedFileFormatException;
 
-class TransactionParserFactory
+final readonly class TransactionParserFactory
 {
     public function make(string $extension): TransactionParserInterface
     {
@@ -15,7 +15,7 @@ class TransactionParserFactory
             'csv' => app(CsvTransactionParser::class),
             'json' => app(JsonTransactionParser::class),
             'xml' => app(XmlTransactionParser::class),
-            default => throw new InvalidArgumentException("Nieobsługiwany format pliku: {$extension}"),
+            default => throw UnsupportedFileFormatException::forExtension($extension),
         };
     }
 }

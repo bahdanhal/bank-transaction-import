@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Contracts;
+namespace App\Application\Transaction\Contracts;
 
 use Illuminate\Http\UploadedFile;
 

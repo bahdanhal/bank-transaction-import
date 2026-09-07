@@ -1,24 +1,26 @@
 <?php
 
+use App\Domain\Transaction\Entities\Import as DomainImport;
+use App\Application\Transaction\UseCases\GetImportsUseCase;
+use App\Application\Transaction\UseCases\ImportTransactionsUseCase;
 use App\Http\Controllers\ProfileController;
-use App\Models\Import;
-use App\Services\TransactionImportService;
-use Illuminate\Http\Request;
+use App\Http\Requests\UploadImportRequest;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
-Route::get('/', function () {
+Route::get('/', function (GetImportsUseCase $useCase) {
+    $imports = array_map(
+        static fn (DomainImport $import): array => $import->toArray(),
+        $useCase->execute()
+    );
+
     return Inertia::render('Imports', [
-        'imports' => Import::with('logs')->latest()->get(),
+        'imports' => $imports,
     ]);
 })->name('imports.index');
 
-Route::post('/imports', function (Request $request, TransactionImportService $service) {
-    $request->validate([
-        'file' => 'required|file|mimes:csv,txt,json,xml|max:10240',
-    ]);
-
-    $service->handle($request->file('file'));
+Route::post('/imports', function (UploadImportRequest $request, ImportTransactionsUseCase $useCase) {
+    $useCase->execute($request->file('file'));
 
     return redirect()->back();
 })->name('imports.store');

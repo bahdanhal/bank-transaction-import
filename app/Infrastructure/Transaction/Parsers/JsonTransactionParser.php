@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace App\Services\Parsers;
+namespace App\Infrastructure\Transaction\Parsers;
 
-use App\Contracts\TransactionParserInterface;
+use App\Application\Transaction\Contracts\TransactionParserInterface;
+use App\Domain\Transaction\Exceptions\FileParsingException;
 use Illuminate\Http\UploadedFile;
 use JsonException;
-use RuntimeException;
 
-final class JsonTransactionParser implements TransactionParserInterface
+final readonly class JsonTransactionParser implements TransactionParserInterface
 {
     public function parse(UploadedFile $file): array
     {
@@ -34,8 +34,8 @@ final class JsonTransactionParser implements TransactionParserInterface
     {
         try {
             return json_decode($json, true, 512, JSON_THROW_ON_ERROR);
-        } catch (JsonException) {
-            throw new RuntimeException("Invalid JSON syntax: {$e->getMessage()}", 0, $e);
+        } catch (JsonException $jsonException) {
+            throw new FileParsingException("Invalid JSON syntax: {$jsonException->getMessage()}", 0, $jsonException);
         }
     }
 }

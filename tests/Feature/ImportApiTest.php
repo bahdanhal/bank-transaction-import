@@ -78,13 +78,13 @@ final class ImportApiTest extends TestCase
 
     public function test_can_upload_and_process_valid_csv(): void
     {
-        $tx1 = (string) Str::uuid();
-        $tx2 = (string) Str::uuid();
+        $firstTransactionId = (string) Str::uuid();
+        $secondTransactionId = (string) Str::uuid();
 
         $csvContent = implode("\n", [
             'transaction_id,account_number,transaction_date,amount,currency',
-            "{$tx1},{$this->validIban},2025-10-14,150000,PLN",
-            "{$tx2},{$this->validIban},2025-10-13,20050,USD"
+            "{$firstTransactionId},{$this->validIban},2025-10-14,150000,PLN",
+            "{$secondTransactionId},{$this->validIban},2025-10-13,20050,USD"
         ]);
 
         $file = UploadedFile::fake()->createWithContent('transactions.csv', $csvContent);
@@ -100,8 +100,8 @@ final class ImportApiTest extends TestCase
             ->assertJsonPath('failed_records', 0);
 
         $this->assertDatabaseCount('transactions', 2);
-        $this->assertDatabaseHas('transactions', ['transaction_id' => $tx1, 'currency' => 'PLN']);
-        $this->assertDatabaseHas('transactions', ['transaction_id' => $tx2, 'currency' => 'USD']);
+        $this->assertDatabaseHas('transactions', ['transaction_id' => $firstTransactionId, 'currency' => 'PLN']);
+        $this->assertDatabaseHas('transactions', ['transaction_id' => $secondTransactionId, 'currency' => 'USD']);
         $this->assertDatabaseCount('import_logs', 0);
     }
 
@@ -139,19 +139,19 @@ final class ImportApiTest extends TestCase
 
     public function test_can_upload_and_process_valid_json(): void
     {
-        $tx1 = (string) Str::uuid();
-        $tx2 = (string) Str::uuid();
+        $firstTransactionId = (string) Str::uuid();
+        $secondTransactionId = (string) Str::uuid();
 
         $jsonContent = json_encode([
             [
-                'transaction_id' => $tx1,
+                'transaction_id' => $firstTransactionId,
                 'account_number' => $this->validIban,
                 'transaction_date' => '2025-10-14',
                 'amount' => 150000,
                 'currency' => 'PLN'
             ],
             [
-                'transaction_id' => $tx2,
+                'transaction_id' => $secondTransactionId,
                 'account_number' => $this->validIban,
                 'transaction_date' => '2025-10-13',
                 'amount' => 20050,
@@ -170,26 +170,26 @@ final class ImportApiTest extends TestCase
             ->assertJsonPath('total_records', 2)
             ->assertJsonPath('successful_records', 2);
 
-        $this->assertDatabaseHas('transactions', ['transaction_id' => $tx1, 'currency' => 'PLN']);
-        $this->assertDatabaseHas('transactions', ['transaction_id' => $tx2, 'currency' => 'USD']);
+        $this->assertDatabaseHas('transactions', ['transaction_id' => $firstTransactionId, 'currency' => 'PLN']);
+        $this->assertDatabaseHas('transactions', ['transaction_id' => $secondTransactionId, 'currency' => 'USD']);
     }
 
     public function test_can_upload_and_process_valid_xml(): void
     {
-        $tx1 = (string) Str::uuid();
-        $tx2 = (string) Str::uuid();
+        $firstTransactionId = (string) Str::uuid();
+        $secondTransactionId = (string) Str::uuid();
 
         $xmlContent = <<<XML
         <transactions>
           <transaction>
-            <transaction_id>{$tx1}</transaction_id>
+            <transaction_id>{$firstTransactionId}</transaction_id>
             <account_number>{$this->validIban}</account_number>
             <transaction_date>2025-10-14</transaction_date>
             <amount>150000</amount>
             <currency>PLN</currency>
           </transaction>
           <transaction>
-            <transaction_id>{$tx2}</transaction_id>
+            <transaction_id>{$secondTransactionId}</transaction_id>
             <account_number>{$this->validIban}</account_number>
             <transaction_date>2025-10-13</transaction_date>
             <amount>20050</amount>
@@ -209,8 +209,8 @@ final class ImportApiTest extends TestCase
             ->assertJsonPath('total_records', 2)
             ->assertJsonPath('successful_records', 2);
 
-        $this->assertDatabaseHas('transactions', ['transaction_id' => $tx1, 'currency' => 'PLN']);
-        $this->assertDatabaseHas('transactions', ['transaction_id' => $tx2, 'currency' => 'USD']);
+        $this->assertDatabaseHas('transactions', ['transaction_id' => $firstTransactionId, 'currency' => 'PLN']);
+        $this->assertDatabaseHas('transactions', ['transaction_id' => $secondTransactionId, 'currency' => 'USD']);
     }
 
     public function test_fails_when_no_file_uploaded(): void
