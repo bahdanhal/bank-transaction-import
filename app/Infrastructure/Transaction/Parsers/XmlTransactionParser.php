@@ -23,12 +23,21 @@ final readonly class XmlTransactionParser implements TransactionParserInterface
             throw new FileParsingException('Invalid XML structure.');
         }
 
-        $data = json_decode(json_encode($simpleXmlElement), true);
-        if (!isset($data['transaction'])) {
+        $encodedJson = json_encode($simpleXmlElement);
+        if ($encodedJson === false) {
+            throw new FileParsingException('Invalid XML structure.');
+        }
+
+        $data = json_decode($encodedJson, true);
+        if (!is_array($data) || !isset($data['transaction'])) {
             return;
         }
 
         $transactions = $data['transaction'];
+        if (!is_array($transactions)) {
+            return;
+        }
+
         $transactionList = is_array(array_first($transactions)) ? $transactions : [$transactions];
 
         foreach ($transactionList as $transaction) {

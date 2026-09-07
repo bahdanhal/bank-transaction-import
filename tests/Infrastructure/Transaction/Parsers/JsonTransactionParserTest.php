@@ -32,6 +32,7 @@ final class JsonTransactionParserTest extends TestCase
         $this->assertInstanceOf(Generator::class, $generator);
         $parsedRecords = iterator_to_array($generator, false);
         $this->assertCount(1, $parsedRecords);
+        $this->assertIsArray($parsedRecords[0]);
         $this->assertSame('550e8400-e29b-41d4-a716-446655440000', $parsedRecords[0]['transaction_id']);
     }
 
@@ -56,6 +57,7 @@ final class JsonTransactionParserTest extends TestCase
 
         $parsedRecords = iterator_to_array($generator, false);
         $this->assertCount(1, $parsedRecords);
+        $this->assertIsArray($parsedRecords[0]);
         $this->assertSame('550e8400-e29b-41d4-a716-446655440000', $parsedRecords[0]['transaction_id']);
     }
 

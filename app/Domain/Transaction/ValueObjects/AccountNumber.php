@@ -27,7 +27,9 @@ final readonly class AccountNumber
         );
 
         if ($validator->fails()) {
-            throw new InvalidArgumentException($validator->errors()->first('account_number') ?: 'The account number must be a valid International Bank Account Number (IBAN).');
+            $validationErrorMessage = $validator->errors()->first('account_number')
+                ?: 'The account number must be a valid International Bank Account Number (IBAN).';
+            throw new InvalidArgumentException($validationErrorMessage);
         }
 
         $this->value = $normalizedAccountNumber;

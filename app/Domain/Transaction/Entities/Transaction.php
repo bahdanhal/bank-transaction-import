@@ -35,23 +35,23 @@ final class Transaction
     }
 
     /**
-     * @param array<string, mixed> $data
+     * @param array<mixed, mixed> $data
      * @throws InvalidTransactionException
      */
     public static function createFromRaw(array $data): self
     {
         $errors = [];
-        $rawTransactionId = isset($data['transaction_id']) && is_string($data['transaction_id'])
-            ? trim($data['transaction_id'])
-            : null;
+        $rawTransactionIdValue = $data['transaction_id'] ?? null;
+        $rawTransactionId = is_string($rawTransactionIdValue) ? trim($rawTransactionIdValue) : null;
 
         // 1. Transaction ID
         $transactionId = null;
-        if (!isset($data['transaction_id']) || trim((string) $data['transaction_id']) === '') {
+        $transactionIdString = self::extractString($rawTransactionIdValue);
+        if ($transactionIdString === '') {
             $errors[] = 'The transaction id field is required.';
         } else {
             try {
-                $transactionId = new TransactionId((string) $data['transaction_id']);
+                $transactionId = new TransactionId($transactionIdString);
             } catch (InvalidArgumentException $validationException) {
                 $errors[] = $validationException->getMessage();
             }
@@ -59,11 +59,12 @@ final class Transaction
 
         // 2. Account Number
         $accountNumber = null;
-        if (!isset($data['account_number']) || trim((string) $data['account_number']) === '') {
+        $accountNumberString = self::extractString($data['account_number'] ?? null);
+        if ($accountNumberString === '') {
             $errors[] = 'Account number is required';
         } else {
             try {
-                $accountNumber = new AccountNumber((string) $data['account_number']);
+                $accountNumber = new AccountNumber($accountNumberString);
             } catch (InvalidArgumentException $validationException) {
                 $errors[] = $validationException->getMessage();
             }
@@ -71,11 +72,12 @@ final class Transaction
 
         // 3. Transaction Date
         $transactionDate = null;
-        if (!isset($data['transaction_date']) || trim((string) $data['transaction_date']) === '') {
+        $transactionDateString = self::extractString($data['transaction_date'] ?? null);
+        if ($transactionDateString === '') {
             $errors[] = 'The transaction date field is required.';
         } else {
             try {
-                $transactionDate = new TransactionDate((string) $data['transaction_date']);
+                $transactionDate = new TransactionDate($transactionDateString);
             } catch (InvalidArgumentException $validationException) {
                 $errors[] = $validationException->getMessage();
             }
@@ -83,11 +85,15 @@ final class Transaction
 
         // 4. Amount
         $amount = null;
-        if (!isset($data['amount']) || trim((string) $data['amount']) === '') {
+        $rawAmount = $data['amount'] ?? null;
+        if (!is_scalar($rawAmount) || trim((string) $rawAmount) === '') {
             $errors[] = 'The amount field is required.';
         } else {
             try {
-                $amount = new Amount($data['amount']);
+                $amountValue = is_string($rawAmount) || is_int($rawAmount) || is_float($rawAmount)
+                    ? $rawAmount
+                    : (string) $rawAmount;
+                $amount = new Amount($amountValue);
             } catch (InvalidArgumentException $validationException) {
                 $errors[] = $validationException->getMessage();
             }
@@ -95,21 +101,33 @@ final class Transaction
 
         // 5. Currency
         $currency = null;
-        if (!isset($data['currency']) || trim((string) $data['currency']) === '') {
+        $currencyString = self::extractString($data['currency'] ?? null);
+        if ($currencyString === '') {
             $errors[] = 'The currency field is required.';
         } else {
             try {
-                $currency = new Currency((string) $data['currency']);
+                $currency = new Currency($currencyString);
             } catch (InvalidArgumentException $validationException) {
                 $errors[] = $validationException->getMessage();
             }
         }
 
-        if (!empty($errors) || $transactionId === null || $accountNumber === null || $transactionDate === null || $amount === null || $currency === null) {
+        $hasMissingProperties = $transactionId === null
+            || $accountNumber === null
+            || $transactionDate === null
+            || $amount === null
+            || $currency === null;
+
+        if (!empty($errors) || $hasMissingProperties) {
             throw new InvalidTransactionException($errors, $rawTransactionId);
         }
 
         return new self($transactionId, $accountNumber, $transactionDate, $amount, $currency);
+    }
+
+    private static function extractString(mixed $value): string
+    {
+        return is_scalar($value) ? trim((string) $value) : '';
     }
 
     #[\NoDiscard]

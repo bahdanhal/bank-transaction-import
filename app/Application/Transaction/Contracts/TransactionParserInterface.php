@@ -9,7 +9,7 @@ use Illuminate\Http\UploadedFile;
 interface TransactionParserInterface
 {
     /**
-     * @return iterable<int, array<string, mixed>>
+     * @return iterable<int, mixed>
      */
     public function parse(UploadedFile $file): iterable;
 }

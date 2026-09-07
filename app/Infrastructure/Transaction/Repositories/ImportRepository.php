@@ -53,7 +53,9 @@ final readonly class ImportRepository implements ImportRepositoryInterface
             }
         }
 
-        return $this->toDomain($importModel->fresh(['logs']));
+        $freshImportModel = $importModel->fresh(['logs']) ?? $importModel;
+
+        return $this->toDomain($freshImportModel);
     }
 
     /**

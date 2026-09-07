@@ -21,7 +21,11 @@ final readonly class CsvTransactionParser implements TransactionParserInterface
         $csvReader->skipEmptyRecords();
 
         foreach ($csvReader->getRecords() as $record) {
-            yield array_map('trim', $record);
+            $trimmedRecord = [];
+            foreach ($record as $key => $field) {
+                $trimmedRecord[(string) $key] = is_scalar($field) ? trim((string) $field) : '';
+            }
+            yield $trimmedRecord;
         }
     }
 }

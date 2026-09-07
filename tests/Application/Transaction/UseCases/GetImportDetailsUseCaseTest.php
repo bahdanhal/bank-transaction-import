@@ -24,6 +24,7 @@ final class GetImportDetailsUseCaseTest extends TestCase
                 ->withProcessedResults(totalRecords: 1, successfulRecords: 0)
         );
 
+        $this->assertNotNull($savedImport->id);
         $useCase = app(GetImportDetailsUseCase::class);
         $retrievedImport = $useCase->execute($savedImport->id);
 

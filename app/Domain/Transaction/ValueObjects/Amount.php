@@ -45,10 +45,12 @@ final readonly class Amount
 
     public function toMoney(Currency|string $currency): Money
     {
-        $currencyCode = $currency instanceof Currency ? $currency->value : $currency;
+        $moneyCurrency = $currency instanceof Currency
+            ? $currency->toMoneyCurrency()
+            : (new Currency($currency))->toMoneyCurrency();
         $isoCurrencies = new ISOCurrencies();
         $decimalParser = new DecimalMoneyParser($isoCurrencies);
 
-        return $decimalParser->parse($this->value, new MoneyCurrency($currencyCode));
+        return $decimalParser->parse($this->value, $moneyCurrency);
     }
 }

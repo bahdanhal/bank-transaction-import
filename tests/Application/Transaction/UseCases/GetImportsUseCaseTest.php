@@ -19,7 +19,6 @@ final class GetImportsUseCaseTest extends TestCase
         $useCase = app(GetImportsUseCase::class);
         $imports = $useCase->execute();
 
-        $this->assertIsArray($imports);
         $this->assertEmpty($imports);
     }
 
