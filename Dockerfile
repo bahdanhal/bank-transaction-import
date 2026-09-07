@@ -18,7 +18,8 @@ RUN COMPOSER_ALLOW_SUPERUSER=1 composer install --no-dev --prefer-dist --no-inte
 COPY . .
 COPY --from=frontend /app/public/build ./public/build
 
-RUN composer dump-autoload --classmap-authoritative --no-dev \
+RUN rm -f bootstrap/cache/*.php \
+    && COMPOSER_ALLOW_SUPERUSER=1 composer dump-autoload --classmap-authoritative --no-dev \
     && mkdir -p storage/framework/sessions storage/framework/views storage/framework/cache storage/logs database \
     && touch database/database.sqlite \
     && chown -R www-data:www-data storage bootstrap/cache database \
