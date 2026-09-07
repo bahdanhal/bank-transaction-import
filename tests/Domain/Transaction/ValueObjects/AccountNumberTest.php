@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Unit\Domain;
+namespace Tests\Domain\Transaction\ValueObjects;
 
 use App\Domain\Transaction\ValueObjects\AccountNumber;
 use InvalidArgumentException;
@@ -21,8 +21,8 @@ final class AccountNumberTest extends TestCase
 
     public function test_normalizes_spaces_and_lowercase(): void
     {
-        $spacedIban = ' pl61 1090 1014 0000 0712 1981 2874 ';
-        $accountNumber = new AccountNumber($spacedIban);
+        $rawAccountNumber = ' pl 61 1090 1014 0000 0712 1981 2874 ';
+        $accountNumber = new AccountNumber($rawAccountNumber);
 
         $this->assertSame($this->validIban, $accountNumber->value);
     }
@@ -30,6 +30,7 @@ final class AccountNumberTest extends TestCase
     public function test_throws_exception_on_invalid_iban_checksum(): void
     {
         $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('The account number must be a valid International Bank Account Number (IBAN).');
 
         new AccountNumber('PL00000000000000000000000000');
     }
@@ -39,6 +40,6 @@ final class AccountNumberTest extends TestCase
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage('Account number is required');
 
-        new AccountNumber('');
+        new AccountNumber('   ');
     }
 }

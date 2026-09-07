@@ -11,6 +11,7 @@ use App\Domain\Transaction\ValueObjects\Currency;
 use App\Domain\Transaction\ValueObjects\TransactionDate;
 use App\Domain\Transaction\ValueObjects\TransactionId;
 use InvalidArgumentException;
+use Money\Money;
 use NoDiscard;
 
 final class Transaction
@@ -27,6 +28,10 @@ final class Transaction
 
     public string $formattedAmount {
         get => "{$this->amount->value} {$this->currency->value}";
+    }
+
+    public Money $money {
+        get => $this->amount->toMoney($this->currency);
     }
 
     /**

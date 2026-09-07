@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Domain\Transaction\ValueObjects;
 
 use InvalidArgumentException;
+use Money\Currency as MoneyCurrency;
 
 final readonly class Currency
 {
@@ -19,5 +20,10 @@ final readonly class Currency
         }
 
         $this->value = $trimmedCurrency;
+    }
+
+    public function toMoneyCurrency(): MoneyCurrency
+    {
+        return new MoneyCurrency($this->value);
     }
 }

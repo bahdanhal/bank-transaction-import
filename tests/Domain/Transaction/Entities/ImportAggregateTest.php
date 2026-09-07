@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Unit\Domain;
+namespace Tests\Domain\Transaction\Entities;
 
 use App\Domain\Transaction\Entities\Import;
 use App\Domain\Transaction\Entities\ImportLog;

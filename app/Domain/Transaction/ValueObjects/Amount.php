@@ -5,6 +5,11 @@ declare(strict_types=1);
 namespace App\Domain\Transaction\ValueObjects;
 
 use InvalidArgumentException;
+use Money\Currencies\ISOCurrencies;
+use Money\Currency as MoneyCurrency;
+use Money\Formatter\DecimalMoneyFormatter;
+use Money\Money;
+use Money\Parser\DecimalMoneyParser;
 
 final readonly class Amount
 {
@@ -25,6 +30,25 @@ final readonly class Amount
             throw new InvalidArgumentException('Amount should be more than zero');
         }
 
-        $this->value = number_format($numericAmount, 2, '.', '');
+        $formattedDecimal = number_format($numericAmount, 2, '.', '');
+        $isoCurrencies = new ISOCurrencies();
+        $decimalParser = new DecimalMoneyParser($isoCurrencies);
+        $decimalFormatter = new DecimalMoneyFormatter($isoCurrencies);
+
+        $parsedMoney = $decimalParser->parse($formattedDecimal, new MoneyCurrency('EUR'));
+        if (!$parsedMoney->isPositive()) {
+            throw new InvalidArgumentException('Amount should be more than zero');
+        }
+
+        $this->value = $decimalFormatter->format($parsedMoney);
+    }
+
+    public function toMoney(Currency|string $currency): Money
+    {
+        $currencyCode = $currency instanceof Currency ? $currency->value : $currency;
+        $isoCurrencies = new ISOCurrencies();
+        $decimalParser = new DecimalMoneyParser($isoCurrencies);
+
+        return $decimalParser->parse($this->value, new MoneyCurrency($currencyCode));
     }
 }

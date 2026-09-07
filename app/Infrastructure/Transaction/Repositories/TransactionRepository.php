@@ -47,10 +47,32 @@ final readonly class TransactionRepository implements TransactionRepositoryInter
             ];
         }
 
-        foreach (array_chunk($recordsToInsert, 500) as $chunkOfTransactions) {
+        foreach ($this->yieldChunks($recordsToInsert, 500) as $chunkOfTransactions) {
             TransactionModel::insert($chunkOfTransactions);
         }
 
         return $transactions;
+    }
+
+    /**
+     * @template T
+     * @param iterable<T> $items
+     * @param int $chunkSize
+     * @return \Generator<int, array<int, T>>
+     */
+    private function yieldChunks(iterable $items, int $chunkSize): \Generator
+    {
+        $currentChunk = [];
+        foreach ($items as $item) {
+            $currentChunk[] = $item;
+            if (count($currentChunk) >= $chunkSize) {
+                yield $currentChunk;
+                $currentChunk = [];
+            }
+        }
+
+        if (!empty($currentChunk)) {
+            yield $currentChunk;
+        }
     }
 }

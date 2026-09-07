@@ -2,10 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Tests\Unit\Domain;
+namespace Tests\Domain\Transaction\ValueObjects;
 
 use App\Domain\Transaction\ValueObjects\Currency;
 use InvalidArgumentException;
+use Money\Currency as MoneyCurrency;
 use PHPUnit\Framework\TestCase;
 
 final class CurrencyTest extends TestCase
@@ -23,5 +24,14 @@ final class CurrencyTest extends TestCase
         $this->expectExceptionMessage('Currency code must be 3 letters');
 
         new Currency('POLAND');
+    }
+
+    public function test_can_convert_to_moneyphp_currency(): void
+    {
+        $currency = new Currency('USD');
+        $moneyCurrency = $currency->toMoneyCurrency();
+
+        $this->assertInstanceOf(MoneyCurrency::class, $moneyCurrency);
+        $this->assertSame('USD', $moneyCurrency->getCode());
     }
 }

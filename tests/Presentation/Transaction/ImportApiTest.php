@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Feature;
+namespace Tests\Presentation\Transaction;
 
 use App\Models\Import;
 use App\Models\ImportLog;
@@ -20,19 +20,19 @@ final class ImportApiTest extends TestCase
     public function test_can_list_all_imports(): void
     {
         Import::create([
-            'file_name' => 'test_1.csv',
-            'total_records' => 10,
+            'file_name'          => 'test_1.csv',
+            'total_records'      => 10,
             'successful_records' => 10,
-            'failed_records' => 0,
-            'status' => 'success',
+            'failed_records'     => 0,
+            'status'             => 'success',
         ]);
 
         Import::create([
-            'file_name' => 'test_2.json',
-            'total_records' => 5,
+            'file_name'          => 'test_2.json',
+            'total_records'      => 5,
             'successful_records' => 2,
-            'failed_records' => 3,
-            'status' => 'partial',
+            'failed_records'     => 3,
+            'status'             => 'partial',
         ]);
 
         $response = $this->getJson('/api/imports');
@@ -46,17 +46,17 @@ final class ImportApiTest extends TestCase
     public function test_can_get_single_import_details_with_logs(): void
     {
         $import = Import::create([
-            'file_name' => 'failing.csv',
-            'total_records' => 1,
+            'file_name'          => 'failing.csv',
+            'total_records'      => 1,
             'successful_records' => 0,
-            'failed_records' => 1,
-            'status' => 'failed',
+            'failed_records'     => 1,
+            'status'             => 'failed',
         ]);
 
         ImportLog::create([
-            'import_id' => $import->id,
+            'import_id'      => $import->id,
             'transaction_id' => '550e8400-e29b-41d4-a716-446655440000',
-            'error_message' => 'Amount should be more than zero',
+            'error_message'  => 'Amount should be more than zero',
         ]);
 
         $response = $this->getJson("/api/imports/{$import->id}");
@@ -84,7 +84,7 @@ final class ImportApiTest extends TestCase
         $csvContent = implode("\n", [
             'transaction_id,account_number,transaction_date,amount,currency',
             "{$firstTransactionId},{$this->validIban},2025-10-14,150000,PLN",
-            "{$secondTransactionId},{$this->validIban},2025-10-13,20050,USD"
+            "{$secondTransactionId},{$this->validIban},2025-10-13,20050,USD",
         ]);
 
         $file = UploadedFile::fake()->createWithContent('transactions.csv', $csvContent);
@@ -108,14 +108,14 @@ final class ImportApiTest extends TestCase
     public function test_can_process_csv_with_validation_errors(): void
     {
         $validUuid = (string) Str::uuid();
-        $invalidIban = 'PL00000000000000000000000000'; // Invalid IBAN checksum
+        $invalidIban = 'PL00000000000000000000000000';
 
         $csvContent = implode("\n", [
             'transaction_id,account_number,transaction_date,amount,currency',
             "{$validUuid},{$this->validIban},2026-03-01,200.00,PLN",
             Str::uuid() . ",{$invalidIban},2026-03-01,100.00,PLN",
             Str::uuid() . ",{$this->validIban},2026-03-01,-50.00,PLN",
-            "not-a-valid-uuid,{$this->validIban},2026-03-01,100.00,POLAND"
+            "not-a-valid-uuid,{$this->validIban},2026-03-01,100.00,POLAND",
         ]);
 
         $file = UploadedFile::fake()->createWithContent('mixed.csv', $csvContent);
@@ -144,22 +144,22 @@ final class ImportApiTest extends TestCase
 
         $jsonContent = json_encode([
             [
-                'transaction_id' => $firstTransactionId,
-                'account_number' => $this->validIban,
+                'transaction_id'   => $firstTransactionId,
+                'account_number'   => $this->validIban,
                 'transaction_date' => '2025-10-14',
-                'amount' => 150000,
-                'currency' => 'PLN'
+                'amount'           => 150000,
+                'currency'         => 'PLN',
             ],
             [
-                'transaction_id' => $secondTransactionId,
-                'account_number' => $this->validIban,
+                'transaction_id'   => $secondTransactionId,
+                'account_number'   => $this->validIban,
                 'transaction_date' => '2025-10-13',
-                'amount' => 20050,
-                'currency' => 'USD'
-            ]
+                'amount'           => 20050,
+                'currency'         => 'USD',
+            ],
         ]);
 
-        $file = UploadedFile::fake()->createWithContent('data.json', $jsonContent);
+        $file = UploadedFile::fake()->createWithContent('data.json', (string) $jsonContent);
 
         $response = $this->postJson('/api/imports', [
             'file' => $file,
@@ -236,11 +236,11 @@ final class ImportApiTest extends TestCase
     public function test_can_handle_random_json_object_gracefully(): void
     {
         $jsonContent = json_encode([
-            'some_id' => 123,
-            'description' => 'random object without transactions'
+            'some_id'     => 123,
+            'description' => 'random object without transactions',
         ]);
 
-        $file = UploadedFile::fake()->createWithContent('random.json', $jsonContent);
+        $file = UploadedFile::fake()->createWithContent('random.json', (string) $jsonContent);
 
         $response = $this->postJson('/api/imports', [
             'file' => $file,
@@ -256,7 +256,7 @@ final class ImportApiTest extends TestCase
     {
         $jsonContent = json_encode([1, 2, 3]);
 
-        $file = UploadedFile::fake()->createWithContent('numbers.json', $jsonContent);
+        $file = UploadedFile::fake()->createWithContent('numbers.json', (string) $jsonContent);
 
         $response = $this->postJson('/api/imports', [
             'file' => $file,

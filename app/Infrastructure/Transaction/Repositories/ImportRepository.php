@@ -48,12 +48,34 @@ final readonly class ImportRepository implements ImportRepositoryInterface
         }
 
         if (!empty($logsToInsert)) {
-            foreach (array_chunk($logsToInsert, 500) as $chunkOfLogs) {
+            foreach ($this->yieldChunks($logsToInsert, 500) as $chunkOfLogs) {
                 ImportLogModel::insert($chunkOfLogs);
             }
         }
 
         return $this->toDomain($importModel->fresh(['logs']));
+    }
+
+    /**
+     * @template T
+     * @param iterable<T> $items
+     * @param int $chunkSize
+     * @return \Generator<int, array<int, T>>
+     */
+    private function yieldChunks(iterable $items, int $chunkSize): \Generator
+    {
+        $currentChunk = [];
+        foreach ($items as $item) {
+            $currentChunk[] = $item;
+            if (count($currentChunk) >= $chunkSize) {
+                yield $currentChunk;
+                $currentChunk = [];
+            }
+        }
+
+        if (!empty($currentChunk)) {
+            yield $currentChunk;
+        }
     }
 
     public function findById(int $importId): ?DomainImport
@@ -69,7 +91,8 @@ final readonly class ImportRepository implements ImportRepositoryInterface
     public function getAllLatest(): array
     {
         return ImportModel::with('logs')
-            ->latest()
+            ->latest('created_at')
+            ->latest('id')
             ->get()
             ->map(fn (ImportModel $importModel) => $this->toDomain($importModel))
             ->all();

@@ -32,47 +32,55 @@ final readonly class ImportTransactionsUseCase
             $parser = $this->parserFactory->make($file->getClientOriginalExtension());
             $records = $parser->parse($file);
 
-            if (empty($records)) {
-                throw new \RuntimeException('No valid transaction records found in file.');
-            }
+            return DB::transaction(function () use ($import, $records) {
+                $batchOfTransactions = [];
+                $successfulCount = 0;
+                $totalRecords = 0;
+                $currentImport = $import;
+
+                foreach ($records as $record) {
+                    $totalRecords++;
+                    if (!is_array($record)) {
+                        $currentImport = $currentImport->withTransactionFailure(
+                            null,
+                            'Invalid transaction format: expected object/array, received ' . gettype($record)
+                        );
+                        continue;
+                    }
+
+                    try {
+                        $transaction = Transaction::createFromRaw($record);
+                        $batchOfTransactions[] = $transaction;
+                        $successfulCount++;
+
+                        if (count($batchOfTransactions) >= 500) {
+                            $this->transactionRepository->saveMany($batchOfTransactions);
+                            $batchOfTransactions = [];
+                        }
+                    } catch (InvalidTransactionException $exception) {
+                        $currentImport = $currentImport->withTransactionFailure(
+                            $exception->transactionId,
+                            $exception->getMessage()
+                        );
+                    }
+                }
+
+                if ($totalRecords === 0) {
+                    $currentImport = $currentImport->withFatalError('No valid transaction records found in file.');
+                    return $this->importRepository->save($currentImport);
+                }
+
+                if (!empty($batchOfTransactions)) {
+                    $this->transactionRepository->saveMany($batchOfTransactions);
+                }
+
+                $currentImport = $currentImport->withProcessedResults($totalRecords, $successfulCount);
+
+                return $this->importRepository->save($currentImport);
+            });
         } catch (Throwable $exception) {
             $import = $import->withFatalError($exception->getMessage());
             return $this->importRepository->save($import);
         }
-
-        return DB::transaction(function () use ($import, $records) {
-            $validTransactions = [];
-            $successfulCount = 0;
-            $currentImport = $import;
-
-            foreach ($records as $record) {
-                if (!is_array($record)) {
-                    $currentImport = $currentImport->withTransactionFailure(
-                        null,
-                        'Invalid transaction format: expected object/array, received ' . gettype($record)
-                    );
-                    continue;
-                }
-
-                try {
-                    $transaction = Transaction::createFromRaw($record);
-                    $validTransactions[] = $transaction;
-                    $successfulCount++;
-                } catch (InvalidTransactionException $exception) {
-                    $currentImport = $currentImport->withTransactionFailure(
-                        $exception->transactionId,
-                        $exception->getMessage()
-                    );
-                }
-            }
-
-            if (!empty($validTransactions)) {
-                $this->transactionRepository->saveMany($validTransactions);
-            }
-
-            $currentImport = $currentImport->withProcessedResults(count($records), $successfulCount);
-
-            return $this->importRepository->save($currentImport);
-        });
     }
 }

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Tests\Unit\Domain;
+namespace Tests\Domain\Transaction\Entities;
 
 use App\Domain\Transaction\Entities\Transaction;
 use App\Domain\Transaction\Exceptions\InvalidTransactionException;
@@ -30,6 +30,8 @@ final class TransactionEntityTest extends TestCase
         $this->assertNull($transaction->id);
 
         $this->assertSame('150.00 PLN', $transaction->formattedAmount);
+        $this->assertSame('15000', $transaction->money->getAmount());
+        $this->assertSame('PLN', $transaction->money->getCurrency()->getCode());
 
         $transactionWithDatabaseId = $transaction->withId(99);
         $this->assertSame(99, $transactionWithDatabaseId->id);
