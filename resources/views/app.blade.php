@@ -5,6 +5,7 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
 
         <title inertia>{{ config('app.name', 'Laravel') }}</title>
+        <meta name="robots" content="noindex, nofollow">
 
         <!-- Fonts -->
         <link rel="preconnect" href="https://fonts.bunny.net">
